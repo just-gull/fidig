@@ -1,8 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
 
 static void print_usage() {
   printf("usage: fidig <digest-type> <path-to-a-file>\n");
@@ -10,8 +13,20 @@ static void print_usage() {
   printf(" -l, --list - lists available digests\n");
 }
 
+static void print_digest(const OBJ_NAME *name, void *arg) {
+  /* Filter out signed digests (a.k.a signature algorithms) */
+  if (strstr(name->name, "rsa") != NULL || strstr(name->name, "RSA") != NULL)
+      return;
+  if (!islower((unsigned char)*name->name))
+      return;
+
+  printf("  %s\n", name->name);
+}
+
 static void print_digests() {
-  printf("Supported digests: ...\n");
+  printf("Supported digests:\n");
+  OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
+  OBJ_NAME_do_all_sorted(OBJ_NAME_TYPE_MD_METH, print_digest, NULL);
 }
 
 int main(int argc, char* argv[]) {
